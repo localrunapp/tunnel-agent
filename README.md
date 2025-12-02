@@ -1,5 +1,8 @@
 # LocalRun Agent
 
+[![CI](https://github.com/localrunapp/tunnel-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/localrunapp/tunnel-agent/actions/workflows/ci.yml)
+[![Docker Publish](https://github.com/localrunapp/tunnel-agent/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/localrunapp/tunnel-agent/actions/workflows/docker-publish.yml)
+
 Universal metrics agent for tunnel providers. Can be used as a **standalone CLI** or embedded in **Docker images**.
 
 ## 🚀 Features
@@ -25,8 +28,13 @@ npx localrun-agent start ngrok --port 8000
 ### As Docker Image
 
 ```bash
-docker pull localrun/ngrok:latest
-docker pull localrun/cloudflared:latest
+# From GitHub Container Registry
+docker pull ghcr.io/localrunapp/ngrok:latest
+docker pull ghcr.io/localrunapp/cloudflared:latest
+
+# Or from Docker Hub (if configured)
+docker pull localrunapp/ngrok:latest
+docker pull localrunapp/cloudflared:latest
 ```
 
 ## 🎯 Usage
