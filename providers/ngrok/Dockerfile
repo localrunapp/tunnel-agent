@@ -1,16 +1,29 @@
+# Stage 1: Build stage con Node.js
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copiar archivos del proyecto
+COPY dist ./dist
+COPY bin ./bin
+COPY package.json ./
+COPY node_modules ./node_modules
+
+# Stage 2: Runtime con ngrok
 FROM ngrok/ngrok:latest
 
-# Instalar Node.js y supervisor
-RUN apk add --no-cache \
-    nodejs \
-    npm \
-    supervisor
+# Instalar dependencias necesarias
+USER root
+RUN apt-get update && apt-get install -y \
+    curl \
+    supervisor \
+    ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copiar el CLI compilado
-COPY dist /app/dist
-COPY bin /app/bin
-COPY package.json /app/package.json
-COPY node_modules /app/node_modules
+# Copiar aplicación desde builder
+COPY --from=builder /app /app
 
 WORKDIR /app
 
