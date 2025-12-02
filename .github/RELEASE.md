@@ -34,23 +34,47 @@ This repository uses GitHub Actions to automatically build and publish Docker im
 
 ## Creating a Release
 
-### Automatic (Recommended)
+### Using Makefile (Recommended)
 
-1. **Update version** in `package.json`:
-   ```bash
-   npm version patch  # or minor, major
-   ```
+The easiest way to create a release is using the Makefile commands:
 
-2. **Push the tag**:
-   ```bash
-   git push origin main --tags
-   ```
+```bash
+# Patch release (1.0.0 → 1.0.1) - Bug fixes
+make release-patch
 
-3. **GitHub Actions will**:
-   - Build TypeScript CLI
-   - Build Docker images for both providers
-   - Push to GHCR with version tags
-   - (Optional) Push to Docker Hub if secrets are configured
+# Minor release (1.0.0 → 1.1.0) - New features, backward compatible
+make release-minor
+
+# Major release (1.0.0 → 2.0.0) - Breaking changes
+make release-major
+```
+
+**What happens:**
+1. ✅ Bumps version in `package.json`
+2. ✅ Creates git commit with version bump
+3. ✅ Creates git tag (e.g., `v1.0.1`)
+4. ✅ Pushes commit and tag to GitHub
+5. ✅ Creates GitHub Release with auto-generated changelog
+6. ✅ Marks release as "latest"
+7. ✅ Triggers Docker image build and publish workflow
+
+### Manual Process
+
+If you prefer manual control:
+
+```bash
+# 1. Bump version
+npm version patch  # or minor, major
+
+# 2. Push changes
+git push origin main --tags
+
+# 3. Create GitHub release
+gh release create v1.0.1 \
+  --title "Release v1.0.1" \
+  --generate-notes \
+  --latest
+```
 
 ### Manual Dispatch
 

@@ -18,6 +18,8 @@ help:
 	@echo "  docker-build-cloudflared - Build cloudflared image"
 	@echo "  docker-push-all   - Push all images to registry"
 	@echo ""
+	@echo "For release commands, run: make help-release"
+	@echo ""
 
 # Variables
 REGISTRY ?= localrun
@@ -44,43 +46,44 @@ test:
 lint:
 	npm run lint
 
-# Docker targets
-.PHONY: docker-build-all
-docker-build-all: build docker-build-ngrok docker-build-cloudflared
-	@echo "✅ All Docker images built"
+# Release management
+.PHONY: release-patch
+release-patch:
+	@echo "Creating patch release..."
+	@npm version patch
+	@$(MAKE) create-release
 
-.PHONY: docker-build-ngrok
-docker-build-ngrok: build
-	@echo "🔨 Building ngrok image..."
-	docker build \
-		-t $(REGISTRY)/ngrok:$(TAG) \
-		-f providers/ngrok/Dockerfile \
-		.
-	@echo "✅ Built: $(REGISTRY)/ngrok:$(TAG)"
+.PHONY: release-minor
+release-minor:
+	@echo "Creating minor release..."
+	@npm version minor
+	@$(MAKE) create-release
 
-.PHONY: docker-build-cloudflared
-docker-build-cloudflared: build
-	@echo "🔨 Building cloudflared image..."
-	docker build \
-		-t $(REGISTRY)/cloudflared:$(TAG) \
-		-f providers/cloudflared/Dockerfile \
-		.
-	@echo "✅ Built: $(REGISTRY)/cloudflared:$(TAG)"
+.PHONY: release-major
+release-major:
+	@echo "Creating major release..."
+	@npm version major
+	@$(MAKE) create-release
 
-.PHONY: docker-push-all
-docker-push-all:
-	docker push $(REGISTRY)/ngrok:$(TAG)
-	docker push $(REGISTRY)/cloudflared:$(TAG)
+.PHONY: create-release
+create-release:
+	@echo "Pushing tags and creating GitHub release..."
+	@git push origin main --tags
+	@VERSION=$$(node -p "require('./package.json').version"); \
+	TAG="v$$VERSION"; \
+	echo "Creating release $$TAG..."; \
+	gh release create $$TAG \
+		--title "Release $$TAG" \
+		--generate-notes \
+		--latest \
+		--verify-tag
 
-.PHONY: docker-clean
-docker-clean:
-	docker rmi -f $(REGISTRY)/ngrok:$(TAG) || true
-	docker rmi -f $(REGISTRY)/cloudflared:$(TAG) || true
+.PHONY: help-release
+help-release:
+	@echo "Release Commands:"
+	@echo "  release-patch     - Bump patch version (1.0.0 -> 1.0.1) and create release"
+	@echo "  release-minor     - Bump minor version (1.0.0 -> 1.1.0) and create release"
+	@echo "  release-major     - Bump major version (1.0.0 -> 2.0.0) and create release"
+	@echo ""
+	@echo "Example: make release-patch"
 
-# Clean
-.PHONY: clean
-clean:
-	rm -rf dist node_modules
-
-.PHONY: clean-all
-clean-all: clean docker-clean
