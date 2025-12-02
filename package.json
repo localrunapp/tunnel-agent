@@ -1,6 +1,6 @@
 {
   "name": "localrun-agent",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Universal metrics agent for tunnel providers",
   "author": "LocalRun",
   "bin": {
