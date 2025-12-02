@@ -22,6 +22,7 @@ jobs:
       contents: read
       packages: write
       id-token: write  # Required for attestation
+      attestations: write  # Required for attestation
     
     strategy:
       matrix:
@@ -90,6 +91,7 @@ jobs:
 
       - name: Generate artifact attestation
         if: github.event_name != 'pull_request'
+        continue-on-error: true  # Optional: may fail if attestations not enabled
         uses: actions/attest-build-provenance@v1
         with:
           subject-name: ${{ env.IMAGE_PREFIX }}/${{ matrix.provider }}
