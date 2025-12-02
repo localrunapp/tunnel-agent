@@ -1,0 +1,84 @@
+{
+  "name": "localrun-agent",
+  "version": "1.0.0",
+  "description": "Universal metrics agent for tunnel providers",
+  "author": "LocalRun",
+  "bin": {
+    "localrun-agent": "./bin/run.js"
+  },
+  "homepage": "https://github.com/localrun/localrun-agent",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "repository": "localrun/localrun-agent",
+  "files": [
+    "/bin",
+    "/dist",
+    "/npm-shrinkwrap.json",
+    "/oclif.manifest.json"
+  ],
+  "dependencies": {
+    "@oclif/core": "^3.15.0",
+    "@oclif/plugin-help": "^6.0.0",
+    "@oclif/plugin-plugins": "^4.1.0",
+    "axios": "^1.6.0",
+    "dockerode": "^4.0.0",
+    "pino": "^8.16.0",
+    "pino-pretty": "^10.2.0"
+  },
+  "devDependencies": {
+    "@oclif/test": "^3.1.0",
+    "@types/chai": "^4",
+    "@types/mocha": "^10",
+    "@types/node": "^20.10.0",
+    "@types/dockerode": "^3.3.0",
+    "chai": "^4",
+    "eslint": "^8.54.0",
+    "eslint-config-oclif": "^5.0.0",
+    "eslint-config-oclif-typescript": "^3.0.0",
+    "mocha": "^10",
+    "oclif": "^4.1.0",
+    "shx": "^0.3.4",
+    "ts-node": "^10.9.0",
+    "tslib": "^2.6.0",
+    "typescript": "^5.3.0"
+  },
+  "oclif": {
+    "bin": "localrun-agent",
+    "dirname": "localrun-agent",
+    "commands": "./dist/app/commands",
+    "plugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-plugins"
+    ],
+    "topicSeparator": " ",
+    "topics": {
+      "start": {
+        "description": "Start metrics collection for a tunnel provider"
+      }
+    }
+  },
+  "scripts": {
+    "build": "shx rm -rf dist && tsc -b",
+    "lint": "eslint . --ext .ts --config .eslintrc",
+    "postpack": "shx rm -f oclif.manifest.json",
+    "posttest": "npm run lint",
+    "prepack": "npm run build && oclif manifest && oclif readme",
+    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
+    "version": "oclif readme && git add README.md",
+    "dev": "ts-node --transpile-only bin/dev.js",
+    "start": "node ./bin/run.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "bugs": "https://github.com/localrun/localrun-agent/issues",
+  "keywords": [
+    "oclif",
+    "tunnel",
+    "metrics",
+    "monitoring",
+    "ngrok",
+    "cloudflare"
+  ],
+  "types": "dist/index.d.ts"
+}
