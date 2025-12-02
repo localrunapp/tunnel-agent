@@ -3,94 +3,105 @@
 [![CI](https://github.com/localrunapp/tunnel-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/localrunapp/tunnel-agent/actions/workflows/ci.yml)
 [![Docker Publish](https://github.com/localrunapp/tunnel-agent/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/localrunapp/tunnel-agent/actions/workflows/docker-publish.yml)
 
-Universal metrics agent for tunnel providers. Can be used as a **standalone CLI** or embedded in **Docker images**.
+Universal metrics collection agent for tunnel providers. Runs as Docker containers alongside tunnel services (ngrok, cloudflared) and reports metrics to LocalRun backend via HTTP.
 
-## 🚀 Features
+## Architecture
 
-- ✅ **Universal CLI** - One tool for all providers
-- ✅ **Standalone or Docker** - Use as CLI or in containers
-- ✅ **Multiple Providers** - ngrok, Cloudflare, localhost.run
-- ✅ **Rich Metrics** - Requests, latency, bandwidth, container stats
-- ✅ **Standard Payload** - Same format for all providers
-- ✅ **Built with oclif** - Professional CLI framework
+```mermaid
+graph TB
+    subgraph "Docker Container: ngrok"
+        A[ngrok daemon] --> B[Metrics Collector]
+        B --> C[HTTP Reporter]
+    end
+    
+    subgraph "Docker Container: cloudflared"
+        D[cloudflared daemon] --> E[Metrics Collector]
+        E --> F[HTTP Reporter]
+    end
+    
+    C -->|POST /api/metrics/ingest| G[LocalRun Backend]
+    F -->|POST /api/metrics/ingest| G
+    
+    G --> H[(Database)]
+    G --> I[Dashboard]
+```
 
-## 📦 Installation
+Each container includes:
+- Tunnel provider daemon (ngrok, cloudflared)
+- Metrics collector (monitors tunnel status, requests, bandwidth)
+- HTTP reporter (sends metrics every 10 seconds)
 
-### As CLI
+## Installation
+
+### Docker Images
+
+```bash
+# Pull from GitHub Container Registry
+docker pull ghcr.io/localrunapp/ngrok:latest
+docker pull ghcr.io/localrunapp/cloudflared:latest
+```
+
+### CLI (Development)
 
 ```bash
 npm install -g localrun-agent
-
-# Or use npx
-npx localrun-agent start ngrok --port 8000
+localrun-agent start ngrok --port 8000
 ```
 
-### As Docker Image
+## Usage
+
+### ngrok
 
 ```bash
-# From GitHub Container Registry
-docker pull ghcr.io/localrunapp/ngrok:latest
-docker pull ghcr.io/localrunapp/cloudflared:latest
-
-# Or from Docker Hub (if configured)
-docker pull localrunapp/ngrok:latest
-docker pull localrunapp/cloudflared:latest
-```
-
-## 🎯 Usage
-
-### Standalone CLI
-
-```bash
-# Start ngrok metrics collection
-localrun-agent start ngrok --port 8000 --tunnel-id my-tunnel
-
-# Start cloudflare with custom backend
-localrun-agent start cloudflare \
-  --port 3000 \
-  --backend-url http://localhost:8000 \
-  --interval 30
-
-# Get help
-localrun-agent start --help
-```
-
-### Docker Container
-
-```bash
-# ngrok
 docker run -d \
-  --name ngrok-8000 \
-  --network portal_default \
-  --add-host host.docker.internal:host-gateway \
+  --name ngrok-tunnel \
+  --network localrun_network \
   -e PROVIDER=ngrok \
   -e TUNNEL_PORT=8000 \
+  -e TUNNEL_ID=my-app \
   -e BACKEND_URL=http://backend:8000 \
   -e NGROK_AUTHTOKEN=your_token \
-  localrun/ngrok:latest \
+  ghcr.io/localrunapp/ngrok:latest \
   http host.docker.internal:8000
+```
 
-# cloudflare
+### cloudflared
+
+```bash
 docker run -d \
-  --name cloudflared-3000 \
-  --network portal_default \
+  --name cloudflared-tunnel \
+  --network localrun_network \
   -e PROVIDER=cloudflare \
   -e TUNNEL_PORT=3000 \
+  -e TUNNEL_ID=my-app \
   -e BACKEND_URL=http://backend:8000 \
-  localrun/cloudflared:latest \
+  ghcr.io/localrunapp/cloudflared:latest \
   tunnel --url http://host.docker.internal:3000
 ```
 
-## 📊 Metrics Payload
+## Environment Variables
 
-All providers send the same standard format:
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `PROVIDER` | Yes | Provider name (`ngrok`, `cloudflare`) | - |
+| `TUNNEL_PORT` | Yes | Local port to expose | - |
+| `TUNNEL_ID` | No | Unique tunnel identifier | `{provider}-{port}` |
+| `BACKEND_URL` | No | LocalRun backend URL | `http://backend:8000` |
+| `METRICS_INTERVAL` | No | Collection interval (seconds) | `10` |
+| `NGROK_AUTHTOKEN` | Yes* | ngrok authentication token | - |
+
+*Required only for ngrok
+
+## Metrics Format
+
+Metrics are sent via HTTP POST to `{BACKEND_URL}/api/metrics/ingest`:
 
 ```json
 {
   "provider": "ngrok",
-  "tunnel_id": "ngrok-8000",
+  "tunnel_id": "my-app",
   "tunnel_port": 8000,
-  "timestamp": 1732654770.123,
+  "timestamp": 1733172000.123,
   "metrics": {
     "tunnel": {
       "public_url": "https://abc123.ngrok.io",
@@ -104,12 +115,6 @@ All providers send the same standard format:
       "rate_5m": 12.8,
       "errors": 5
     },
-    "latency": {
-      "p50": 25.3,
-      "p90": 85.2,
-      "p95": 120.8,
-      "p99": 200.5
-    },
     "bandwidth": {
       "bytes_in": 5242880,
       "bytes_out": 10485760,
@@ -118,7 +123,6 @@ All providers send the same standard format:
     },
     "container": {
       "memory_usage_bytes": 52428800,
-      "memory_limit_bytes": 536870912,
       "memory_percent": 9.77,
       "cpu_percent": 2.5,
       "network_rx_bytes": 1048576,
@@ -128,101 +132,51 @@ All providers send the same standard format:
 }
 ```
 
-## 🏗️ Project Structure
+## Supported Providers
 
-```
-localrun-agent/
-├── app/                    # oclif CLI application
-│   ├── commands/           # CLI commands
-│   │   └── start.ts        # Main start command
-│   └── services/           # Business logic
-│       └── metrics-service.ts
-├── core/                   # Core functionality
-│   ├── types/              # TypeScript types
-│   ├── collectors/         # Metrics collectors
-│   │   ├── ngrok-collector.ts
-│   │   ├── cloudflare-collector.ts
-│   │   └── container-stats.ts
-│   └── reporters/          # Metrics reporters
-│       └── http-reporter.ts
-├── providers/              # Docker provider configs
-│   ├── shared/
-│   │   └── entrypoint.sh   # Shared entrypoint
-│   ├── ngrok/
-│   │   ├── Dockerfile
-│   │   └── supervisord.conf
-│   └── cloudflared/
-│       ├── Dockerfile
-│       └── supervisord.conf
-├── bin/                    # CLI executables
-├── package.json            # oclif configuration
-└── Makefile                # Build system
-```
+| Provider | Status | Image |
+|----------|--------|-------|
+| ngrok | Production | `ghcr.io/localrunapp/ngrok` |
+| cloudflared | Production | `ghcr.io/localrunapp/cloudflared` |
+| localhost.run | Planned | - |
 
-## 🛠️ Development
+## Development
 
-### Build CLI
+### Build
 
 ```bash
-# Install dependencies
 npm install
-
-# Build TypeScript
 npm run build
-
-# Run in dev mode
-npm run dev start ngrok --port 8000
 ```
 
-### Build Docker Images
+### Run Locally
 
 ```bash
-# Build all images
-make docker-build-all
-
-# Build specific image
-make docker-build-ngrok
-make docker-build-cloudflared
+npm run dev start ngrok --port 8000 --backend-url http://localhost:8000
 ```
 
-## 🔧 Configuration
+### Release
 
-### CLI Flags
+```bash
+# Create a new release (builds and publishes Docker images)
+make release-patch  # 1.0.0 -> 1.0.1
+make release-minor  # 1.0.0 -> 1.1.0
+make release-major  # 1.0.0 -> 2.0.0
+```
 
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--port` | `-p` | Local port being tunneled | Required |
-| `--tunnel-id` | `-i` | Unique tunnel ID | `{provider}-{port}` |
-| `--backend-url` | `-b` | Backend URL | `http://backend:8000` |
-| `--interval` | `-n` | Collection interval (seconds) | `10` |
-| `--log-level` | `-l` | Log level | `info` |
+## Backend Integration
 
-### Environment Variables
+Your LocalRun backend must implement the metrics ingestion endpoint:
 
-All flags can be set via environment variables:
+```python
+@app.post("/api/metrics/ingest")
+async def ingest_metrics(metrics: dict):
+    # Store metrics in database
+    # Update tunnel status
+    # Trigger alerts if needed
+    return {"status": "ok"}
+```
 
-- `TUNNEL_PORT`
-- `TUNNEL_ID`
-- `BACKEND_URL`
-- `METRICS_INTERVAL`
-- `LOG_LEVEL`
-
-## 📝 Adding a New Provider
-
-1. Create collector in `core/collectors/your-provider-collector.ts`
-2. Add to factory in `core/collectors/index.ts`
-3. Create `providers/your-provider/Dockerfile`
-4. Create `providers/your-provider/supervisord.conf`
-5. Add build target to `Makefile`
-
-## 📄 License
+## License
 
 MIT
-
-## 🤝 Contributing
-
-Contributions welcome! Please read our contributing guidelines.
-
----
-
-**Made with ❤️ by LocalRun Team**
