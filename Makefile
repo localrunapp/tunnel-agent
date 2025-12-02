@@ -73,7 +73,7 @@ create-release:
 	TAG="v$$VERSION"; \
 	echo "Creating release $$TAG..."; \
 	gh release create $$TAG \
-		--title "Release $$TAG" \
+		--title "$$TAG" \
 		--generate-notes \
 		--latest \
 		--verify-tag
