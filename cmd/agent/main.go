@@ -16,6 +16,7 @@ import (
 
 	"github.com/localrunapp/tunnel-agent/internal/metrics"
 	"github.com/localrunapp/tunnel-agent/internal/middleware"
+	"github.com/localrunapp/tunnel-agent/internal/version"
 )
 
 func main() {
@@ -26,8 +27,14 @@ func main() {
 	backendURL := flag.String("backend-url", getEnv("BACKEND_URL", ""), "Backend URL")
 	interval := flag.Int("interval", 10, "Metrics interval in seconds")
 	ngrokArgs := flag.String("ngrok-args", "", "Additional ngrok arguments")
+	ver := flag.Bool("version", false, "Print version and exit")
 
 	flag.Parse()
+
+	if *ver {
+		fmt.Printf("LocalRun Agent v%s\n", version.Version)
+		os.Exit(0)
+	}
 
 	if *provider == "" || *port == "" {
 		log.Fatal("provider and port are required")

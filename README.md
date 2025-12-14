@@ -14,9 +14,9 @@ High-performance, lightweight tunnel agent written in Go.
 
 | Provider | Image | Size | Type |
 |----------|-------|------|------|
-| **Cloudflare** | `ghcr.io/localrunapp/cloudflared-go` | ~53MB | Quick Tunnels & Private Tunnels |
-| **Ngrok** | `ghcr.io/localrunapp/ngrok-go` | ~43MB | Authenticated Tunnels |
-| **Pinggy** | `ghcr.io/localrunapp/pinggy-go` | ~45MB | SSH-based Tunnels |
+| **Cloudflare** | `ghcr.io/localrunapp/cloudflared` | ~53MB | Quick Tunnels & Private Tunnels |
+| **Ngrok** | `ghcr.io/localrunapp/ngrok` | ~43MB | Authenticated Tunnels |
+| **Pinggy** | `ghcr.io/localrunapp/pinggy` | ~45MB | SSH-based Tunnels |
 
 ## Usage
 
@@ -29,7 +29,7 @@ docker run -d \
   -e TUNNEL_PORT=3000 \
   -e TARGET_HOST=host.docker.internal \
   --add-host host.docker.internal:host-gateway \
-  ghcr.io/localrunapp/cloudflared-go:latest
+  ghcr.io/localrunapp/cloudflared:latest
 
 # Pinggy
 docker run -d \
@@ -37,7 +37,7 @@ docker run -d \
   -e TUNNEL_PORT=3000 \
   -e TARGET_HOST=host.docker.internal \
   --add-host host.docker.internal:host-gateway \
-  ghcr.io/localrunapp/pinggy-go:latest
+  ghcr.io/localrunapp/pinggy:latest
 ```
 
 ### Environment Variables
@@ -54,9 +54,9 @@ docker run -d \
 
 | Provider | Image | Size | Type |
 |----------|-------|------|------|
-| **Cloudflare** | `ghcr.io/localrunapp/cloudflared-go` | ~53MB | Quick Tunnels & Private Tunnels |
-| **Ngrok** | `ghcr.io/localrunapp/ngrok-go` | ~43MB | Authenticated Tunnels |
-| **Pinggy** | `ghcr.io/localrunapp/pinggy-go` | ~45MB | SSH-based Tunnels |
+| **Cloudflare** | `ghcr.io/localrunapp/cloudflared` | ~53MB | Quick Tunnels & Private Tunnels |
+| **Ngrok** | `ghcr.io/localrunapp/ngrok` | ~43MB | Authenticated Tunnels |
+| **Pinggy** | `ghcr.io/localrunapp/pinggy` | ~45MB | SSH-based Tunnels |
 
 ## Development
 

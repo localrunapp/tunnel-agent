@@ -37,4 +37,4 @@ tmp/
 temp/
 
 # Go Binary
-agent
+/agent
