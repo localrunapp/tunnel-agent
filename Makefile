@@ -1,89 +1,96 @@
-# LocalRun Agent - Makefile
+# LocalRun Agent (Go) - Makefile
 
 .PHONY: help
 help:
-	@echo "LocalRun Agent - Build System"
-	@echo "=============================="
+	@echo "LocalRun Agent (Go) - Build System"
+	@echo "=================================="
 	@echo ""
-	@echo "CLI Commands:"
-	@echo "  install           - Install dependencies"
-	@echo "  build             - Build TypeScript to dist/"
-	@echo "  dev               - Run in development mode"
-	@echo "  test              - Run tests"
-	@echo "  lint              - Run linter"
+	@echo "Go Commands:"
+	@echo "  build             - Build Go binary locally"
+	@echo "  run               - Run agent locally"
+	@echo "  clean             - Clean build artifacts"
 	@echo ""
 	@echo "Docker Commands:"
-	@echo "  docker-build-all  - Build all provider images"
-	@echo "  docker-build-ngrok      - Build ngrok image"
-	@echo "  docker-build-cloudflared - Build cloudflared image"
-	@echo "  docker-push-all   - Push all images to registry"
+	@echo "  build-ngrok       - Build ngrok image"
+	@echo "  build-cloudflared - Build cloudflared image"
+	@echo "  build-pinggy      - Build pinggy image"
+	@echo "  build-all         - Build all images"
 	@echo ""
-	@echo "For release commands, run: make help-release"
+	@echo "Release Commands:"
+	@echo "  release-patch     - Create patch release"
+	@echo "  release-minor     - Create minor release"
+	@echo "  release-major     - Create major release"
 	@echo ""
 
 # Variables
-REGISTRY ?= localrun
-TAG ?= latest
+BINARY_NAME=agent
+DIST_DIR=dist
 
-# CLI targets
-.PHONY: install
-install:
-	npm install
-
+# Go targets
 .PHONY: build
 build:
-	npm run build
+	@echo "Building Go binary..."
+	@mkdir -p $(DIST_DIR)
+	@go build -o $(DIST_DIR)/$(BINARY_NAME) ./cmd/agent
+	@echo "✅ Built: $(DIST_DIR)/$(BINARY_NAME)"
 
-.PHONY: dev
-dev:
-	npm run dev
+.PHONY: run
+run: build
+	@./$(DIST_DIR)/$(BINARY_NAME)
 
-.PHONY: test
-test:
-	npm test
+.PHONY: clean
+clean:
+	@rm -rf $(DIST_DIR)
+	@echo "Cleaned build artifacts"
 
-.PHONY: lint
-lint:
-	npm run lint
+# Docker targets
+.PHONY: build-ngrok
+build-ngrok:
+	@echo "Building ngrok image..."
+	docker build -t ghcr.io/localrunapp/ngrok-go:dev -f providers/ngrok/Dockerfile .
+	@echo "✅ Built: ghcr.io/localrunapp/ngrok-go:dev"
+
+.PHONY: build-cloudflared
+build-cloudflared:
+	@echo "Building cloudflared image..."
+	docker build -t ghcr.io/localrunapp/cloudflared-go:dev -f providers/cloudflared/Dockerfile .
+	@echo "✅ Built: ghcr.io/localrunapp/cloudflared-go:dev"
+
+.PHONY: build-pinggy
+build-pinggy:
+	@echo "Building pinggy image..."
+	docker build -t ghcr.io/localrunapp/pinggy-go:dev -f providers/pinggy/Dockerfile .
+	@echo "✅ Built: ghcr.io/localrunapp/pinggy-go:dev"
+
+.PHONY: build-all
+build-all: build-ngrok build-cloudflared build-pinggy
+	@echo "✅ All images built"
 
 # Release management
 .PHONY: release-patch
 release-patch:
 	@echo "Creating patch release..."
-	@npm version patch
-	@$(MAKE) create-release
+	@# We use a file for versioning since we don't have package.json anymore
+	@# Or we can just rely on git tags
+	@$(MAKE) create-release TYPE=patch
 
 .PHONY: release-minor
 release-minor:
 	@echo "Creating minor release..."
-	@npm version minor
-	@$(MAKE) create-release
+	@$(MAKE) create-release TYPE=minor
 
 .PHONY: release-major
 release-major:
 	@echo "Creating major release..."
-	@npm version major
-	@$(MAKE) create-release
+	@$(MAKE) create-release TYPE=major
 
 .PHONY: create-release
 create-release:
-	@echo "Pushing tags and creating GitHub release..."
-	@git push origin main --tags
-	@VERSION=$$(node -p "require('./package.json').version"); \
-	TAG="v$$VERSION"; \
-	echo "Creating release $$TAG..."; \
-	gh release create $$TAG \
-		--title "$$TAG" \
-		--generate-notes \
-		--latest \
-		--verify-tag
-
-.PHONY: help-release
-help-release:
-	@echo "Release Commands:"
-	@echo "  release-patch     - Bump patch version (1.0.0 -> 1.0.1) and create release"
-	@echo "  release-minor     - Bump minor version (1.0.0 -> 1.1.0) and create release"
-	@echo "  release-major     - Bump major version (1.0.0 -> 2.0.0) and create release"
-	@echo ""
-	@echo "Example: make release-patch"
-
+	@echo "Creating GitHub release..."
+	@# Get current version from git tag or default to v0.0.0
+	@LAST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"); \
+	echo "Last tag: $$LAST_TAG"; \
+	# Logic to increment version would go here, but for now we'll let user handle tagging or use a script
+	# For simplicity in this migration, we'll ask user to tag manually or use a script
+	@echo "Automatic version bumping for Go project requires a script."
+	@echo "Please run: git tag v2.0.0 && git push origin v2.0.0"

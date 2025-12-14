@@ -1,37 +1,34 @@
-# Stage 1: Build stage con Node.js
-FROM node:18-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
+COPY go.mod ./
+RUN touch go.sum
+COPY cmd ./cmd
+COPY internal ./internal
+RUN go mod tidy && go mod download
 
-# Copiar archivos del proyecto
-COPY dist ./dist
-COPY bin ./bin
-COPY package.json ./
-COPY node_modules ./node_modules
+# Build static binary
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -a -installsuffix cgo \
+    -ldflags="-w -s" \
+    -trimpath \
+    -o agent ./cmd/agent
 
-# Stage 2: Runtime con ngrok
-FROM ngrok/ngrok:latest
+# Minimal runtime - Alpine only for ngrok binary
+FROM alpine:3.19
 
-# Instalar dependencias necesarias
-USER root
-RUN apt-get update && apt-get install -y \
-    curl \
-    supervisor \
-    ca-certificates \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
+# Install ONLY ngrok binary (no supervisor!)
+RUN apk add --no-cache ca-certificates \
+    && wget -qO- https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tgz \
+    | tar xz -C /usr/local/bin \
+    && rm -rf /var/cache/apk/* /tmp/*
 
-# Copiar aplicación desde builder
-COPY --from=builder /app /app
+ENV PROVIDER=ngrok
 
-WORKDIR /app
-
-# Copiar configuración de supervisor
-COPY providers/ngrok/supervisord.conf /etc/supervisord.conf
-
-# Copiar entrypoint compartido
+# Copy Go binary
+COPY --from=builder /build/agent /usr/local/bin/agent
 COPY providers/shared/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Go binary manages everything (no supervisor!)
 ENTRYPOINT ["/entrypoint.sh"]
